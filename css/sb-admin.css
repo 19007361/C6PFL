@@ -226,6 +226,30 @@ ul.alert-dropdown {
     color: #df8a13;
 }
 
-#logout-option, #login-option {
+/* My CSS */
+
+#logout-option, #login-option, #reset-password-option {
     border: none;
+    background: none;
+}
+
+#republics-image {
+    max-width: 100%;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+thead {
+    border-bottom-width: medium;
+}
+
+tfoot {
+    border-top-width: thick;
+    border-top-style: double;
+}
+
+.my-points-table-day {
+    background-color: transparent !important;
 }
