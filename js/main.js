@@ -343,7 +343,7 @@ $(document).ready(function () {
     });
 
     /*  INDEX   */
-    if (currentFile == 'index.html') {
+    if (currentFile == 'index.html' || currentFile == '') {
         var resultsToday = 0;
         fixturesRef.once('value', function (snapshot) {
             snapshot.forEach(function (childSnapshot) {
