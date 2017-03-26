@@ -30,11 +30,12 @@ $(document).ready(function () {
                 $("#logout-option").removeClass("hidden");
                 $("#reset-password-option").removeClass("hidden");
                 $(".nav-logged-in-only").removeClass("hidden");
+                $("#view-points-logged-in-only").removeClass("hidden");
                 if (currentFile == 'login.html') {
                     window.location.href = 'index.html';
                 }
                 usersRef.once('value', function (snapshot) {
-                    $("#your-name-here").text(snapshot.child("name").val());
+                    $("#your-name-here").html("<img src='images/" + snapshot.child("republic").val() + ".png' class='fa fa-fw'/> " + snapshot.child("name").val());
                 });
             }
 
@@ -311,7 +312,8 @@ $(document).ready(function () {
                 $("#logout-option").addClass("hidden");
                 $("#reset-password-option").addClass("hidden");
                 $(".nav-logged-in-only").addClass("hidden");
-                if (currentFile !== 'login.html' && currentFile !== 'index.html' && currentFile !== 'fixtures.html' && currentFile !== 'republics.html' && currentFile !== 'results.html') {
+                $("#view-points-logged-in-only").addClass("hidden");
+                if (currentFile !== 'login.html' && currentFile !== 'index.html' && currentFile !== 'fixtures.html' && currentFile !== 'republics.html' && currentFile !== 'results.html' && currentFile !== '') {
                     alert("Not logged in.");
                     window.location.href = 'login.html';
                 }
