@@ -12,6 +12,7 @@ $(document).ready(function () {
     if (true) {
         var usersRef;
         var fixturesRef = firebase.database().ref().child("fixtures");
+        var teamsRef = firebase.database().ref().child("teams");
         var dbauth = firebase.auth();
         var studNo;
         var currentUser;
@@ -25,18 +26,31 @@ $(document).ready(function () {
             if (true) {
                 studNo = currentUser.email.substring(0, 8);
                 usersRef = firebase.database().ref().child("users").child(studNo);
-                console.log("Logged in with: " + firebaseUser.email);
+                console.log("Logged in with: " + currentUser.email);
                 $("#login-option").addClass("hidden");
                 $("#logout-option").removeClass("hidden");
                 $("#reset-password-option").removeClass("hidden");
                 $(".nav-logged-in-only").removeClass("hidden");
                 $("#view-points-logged-in-only").removeClass("hidden");
                 if (currentFile == 'login.html') {
+                    if (currentUser.email == "hkwilgen@sun.ac.za") {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                }
+                if (currentFile == 'admin.html' && currentUser.email != "hkwilgen@sun.ac.za") {
+                    alert("Not an admin account.");
                     window.location.href = 'index.html';
                 }
-                usersRef.once('value', function (snapshot) {
-                    $("#your-name-here").html("<img src='images/" + snapshot.child("republic").val() + ".png' class='fa fa-fw'/> " + snapshot.child("name").val());
-                });
+                if (currentUser.email == "hkwilgen@sun.ac.za") {
+                    $(".navbar-nav").append("<li><a href='admin.html' style='background-color: blue;'><i class='fa fa-fw fa-unlock-alt'></i> Admin</a></li>");
+                    $("#your-name-here").text("Admin");
+                } else {
+                    usersRef.once('value', function (snapshot) {
+                        $("#your-name-here").html("<img src='images/" + snapshot.child("republic").val() + ".png' class='fa fa-fw'/> " + snapshot.child("name").val());
+                    });
+                }
             }
 
             /*  PREDICT */
@@ -549,5 +563,199 @@ $(document).ready(function () {
 
         });
     }
+
+    /* ADMIN */
+    if (currentFile == 'admin.html') {
+        var numFixtures = 0;
+        fixturesRef.on('value', function (snapshot) {
+            $("#admin-fixtures-table tbody tr").remove();
+            var deleteFixturesAppend = "", addResultsAppend = "", deleteResultsAppend = "";
+            var counter = 0;
+            snapshot.forEach(function (childSnapshot) {
+                var matchTime = new Date(childSnapshot.child("datetime").val());
+                var team1 = childSnapshot.child("team1").val();
+                var team2 = childSnapshot.child("team2").val();
+                row = document.getElementById("admin-fixtures-table").getElementsByTagName("tbody")[0].insertRow();
+                row.insertCell(0).innerHTML = childSnapshot.key;
+                row.insertCell(1).innerHTML = matchTime.toDateString();
+                row.insertCell(2).innerHTML = matchTime.toLocaleTimeString();
+                row.insertCell(3).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
+                row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
+                var matchDescription = "<option value='" + childSnapshot.key + "'>" + childSnapshot.key + " - " + childSnapshot.child("team1").val() + " vs. " + childSnapshot.child("team2").val() + " on " + new Date(childSnapshot.child("datetime").val()).toDateString() + " at " + new Date(childSnapshot.child("datetime").val()).toLocaleTimeString() + "</option>";
+                deleteFixturesAppend = matchDescription + deleteFixturesAppend;
+                if (childSnapshot.child("teamWon").val() == "") {
+                    addResultsAppend += matchDescription;
+                }
+                else {
+                    deleteResultsAppend += matchDescription;
+                }
+                counter++;
+            });
+            numFixtures = counter;
+            $("#admin-delete-fixtures-selects").html(deleteFixturesAppend);
+            $("#admin-add-results-match-selects").html(addResultsAppend);
+            $("#admin-delete-results-selects").html(deleteResultsAppend);
+            $("#admin-add-fixtures-match-selects").html("<option value='" + (numFixtures + 1) + "'>" + (numFixtures + 1) + "</option>");
+            $("#admin-add-fixtures-team1-selects").html("");
+            $("#admin-add-fixtures-team2-selects").html("");
+            $("#admin-add-results-team-selects").html("");
+            teamsRef.once('value', function (teamsSnap) {
+                teamsSnap.forEach(function (childTeamsSnap) {
+                    $("#admin-add-fixtures-team1-selects").append("<option value='" + childTeamsSnap.key + "'>" + childTeamsSnap.key + "</option>");
+                    $("#admin-add-fixtures-team2-selects").append("<option value='" + childTeamsSnap.key + "'>" + childTeamsSnap.key + "</option>");
+                    $("#admin-add-results-team-selects").append("<option value='" + childTeamsSnap.key + "'>" + childTeamsSnap.key + "</option>");
+                });
+            });
+        });
+
+        $("body").on('submit', '#admin-add-fixtures-form', function () {
+            var num = (numFixtures + 1);
+            var team1 = $("#admin-add-fixtures-team1-selects").find(":selected").text();
+            var team2 = $("#admin-add-fixtures-team2-selects").find(":selected").text();
+            var date = $("#admin-add-fixtures-date").val();
+            var time = $("#admin-add-fixtures-time").val();
+
+            console.log("Attempting to add new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time);
+            var diff = new Date(date).getTime() - new Date().getTime();
+            if (diff < 0) {
+                alert("Seems like this is in the past.");
+            } else if (team1 == team2) {
+                alert("Teams are the same.");
+            } else {
+                if (confirm("Do you want to add the new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time + "?")) {
+                    console.log(new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString());
+                    fixturesRef.child(numFixtures + 1).update({
+                        datetime: new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString(),
+                        numberWon: "",
+                        typeWon: "",
+                        teamWon: "",
+                        team1: team1,
+                        team2: team2
+                    });
+
+                    alert("Submitted.");
+                }
+            }
+        });
+
+        $("body").on('submit', '#admin-delete-fixtures-form', function () {
+            var del = $("#admin-delete-fixtures-selects").find(":selected");
+            var delVal = parseInt(del.val());
+            if (confirm("Delete the following: Match " + del.text() + "?")) {
+                if (delVal != numFixtures) {
+                    fixturesRef.child(delVal).remove();
+                    var i = delVal + 1;
+                    fixturesRef.once('value', function (miniSnap) {
+                        miniSnap.forEach(function (childMiniSnap) {
+                            if (childMiniSnap.key >= i) {
+                                fixturesRef.child(i - 1).set(childMiniSnap.val());
+                                fixturesRef.child(i).remove();
+                                i++;
+                            }
+                        });
+                    });
+                } else {
+                    fixturesRef.child(delVal).remove();
+                }
+            }
+        });
+
+        $("body").on('click', '#admin-add-results-team-selects', function (event) {
+            event.preventDefault();
+            if ($(this).val() == 'Draw') {
+                $("#admin-add-results-number-fieldset").prop("disabled", true);
+                $("#admin-add-results-type-fieldset").prop("disabled", true);
+            } else {
+                $("#admin-add-results-number-fieldset").prop("disabled", false);
+                $("#admin-add-results-type-fieldset").prop("disabled", false);
+            }
+        });
+
+        $("body").on('submit', '#admin-add-results-form', function () {
+            fixturesRef.once('value', function (snap) {
+                var num = $("#admin-add-results-match-selects").find(":selected").val();
+                var team1 = snap.child(num).child("team1").val();
+                var team2 = snap.child(num).child("team2").val();
+                var teamWon = $("#admin-add-results-team-selects").find(":selected").val();
+                var numberWon = $("#admin-add-results-number-input").val();
+                var typeWon = $("#admin-add-results-type-selects").find(":selected").val();
+                if (teamWon == team1 || teamWon == team2) {
+                    if (teamWon == "Draw") {
+                        if (confirm("Adding result: Draw?")) {
+                            fixturesRef.child(num).update({
+                                numberWon: "0",
+                                typeWon: "Draw",
+                                teamWon: "draw"
+                            });
+                            alert("Added result: Draw");
+                        }
+                    } else {
+                        if (confirm("Adding result: " + teamWon + " won by " + numberWon + " " + typeWon + "?")) {
+                            fixturesRef.child(num).update({
+                                numberWon: numberWon,
+                                typeWon: typeWon,
+                                teamWon: teamWon
+                            });
+                            alert("Added result: " + teamWon + " won by " + numberWon + " " + typeWon);
+                        }
+                    }
+                } else {
+                    alert("This team wasn't part of this match.");
+                }
+            });
+        });
+        
+        $("body").on('submit', '#admin-delete-results-form', function () {
+            var del = $("#admin-delete-results-selects").find(":selected");
+            var delVal = parseInt(del.val());
+            if (confirm("Delete result from: Match " + del.text() + "?")) {
+                    fixturesRef.child(delVal).update ({
+                        teamWon: "",
+                        typeWon: "",
+                        numberWon: ""
+                    });
+            }
+        });
+        
+        var day = "";
+        var dayCounter = 0;
+        fixturesRef.once('value', function (fixturesSnap) {
+            fixturesSnap.forEach(function (childSnapshot) {
+                var matchTime = new Date(childSnapshot.child("datetime").val());
+                var diff = matchTime.getTime() - new Date().getTime();
+
+                if (diff < 0 && childSnapshot.child("teamWon").val() != "") {
+                    var team1 = childSnapshot.child("team1").val();
+                    var team2 = childSnapshot.child("team2").val();
+                    var teamWon = childSnapshot.child("teamWon").val();
+                    var typeWon = childSnapshot.child("typeWon").val();
+                    var numberWon = childSnapshot.child("numberWon").val();
+
+                    var row = document.getElementById("results-table").getElementsByTagName("tbody")[0].insertRow();
+                    var cell0 = row.insertCell(0);
+                    if (matchTime.toDateString() != day) {
+                        dayCounter++;
+                        day = matchTime.toDateString();
+                        cell0.innerHTML = "<b>" + dayCounter + "</b>";
+                    }
+                    cell0.className = "my-points-table-day";
+
+                    row.insertCell(1).innerHTML = childSnapshot.key;
+                    row.insertCell(2).innerHTML = matchTime.toDateString();
+                    row.insertCell(3).innerHTML = matchTime.toLocaleTimeString();
+                    row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
+                    row.insertCell(5).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
+                        if (teamWon == "Draw") {
+                            row.insertCell(6).innerHTML = "<b>Draw</b>";
+                        } else {
+                            row.insertCell(6).innerHTML = "<b>" + teamWon + "</b> by <b>" + numberWon + " " + typeWon + "</b>";
+                        }
+                }
+            });
+
+        });
+
+    }
+
 
 });
