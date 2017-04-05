@@ -10,7 +10,9 @@ $(document).ready(function () {
     firebase.initializeApp(config);
 
     if (true) {
-        var usersRef;
+        var isFixtureAdded = false;
+        var myUserRef;
+        var usersRef = firebase.database().ref().child("users");
         var fixturesRef = firebase.database().ref().child("fixtures");
         var teamsRef = firebase.database().ref().child("teams");
         var dbauth = firebase.auth();
@@ -25,7 +27,7 @@ $(document).ready(function () {
         if (currentUser) {
             if (true) {
                 studNo = currentUser.email.substring(0, 8);
-                usersRef = firebase.database().ref().child("users").child(studNo);
+                myUserRef = firebase.database().ref().child("users").child(studNo);
                 console.log("Logged in with: " + currentUser.email);
                 $("#login-option").addClass("hidden");
                 $("#logout-option").removeClass("hidden");
@@ -46,8 +48,9 @@ $(document).ready(function () {
                 if (currentUser.email == "hkwilgen@sun.ac.za") {
                     $(".navbar-nav").append("<li><a href='admin.html' style='background-color: blue;'><i class='fa fa-fw fa-unlock-alt'></i> Admin</a></li>");
                     $("#your-name-here").text("Admin");
+                    $(".nav-logged-in-only").addClass("hidden");
                 } else {
-                    usersRef.once('value', function (snapshot) {
+                    myUserRef.once('value', function (snapshot) {
                         $("#your-name-here").html("<img src='images/" + snapshot.child("republic").val() + ".png' class='fa fa-fw'/> " + snapshot.child("name").val());
                     });
                 }
@@ -55,7 +58,7 @@ $(document).ready(function () {
 
             /*  PREDICT */
             if (currentFile == 'predict.html') {
-                usersRef.once('value', function (usersSnap) {
+                myUserRef.once('value', function (usersSnap) {
                     fixturesRef.once('value', function (snapshot) {
                         snapshot.forEach(function (childSnapshot) {
                             var matchTime = new Date(childSnapshot.child("datetime").val());
@@ -167,7 +170,7 @@ $(document).ready(function () {
                                     runs = "0",
                                     wickets = "0";
                                 if (confirm("You selected this match to end in a draw. You can change your picks up until the match starts.")) {
-                                    usersRef.child("picks").child(num).update({
+                                    myUserRef.child("picks").child(num).update({
                                         team: team,
                                         runs: runs,
                                         wickets: wickets
@@ -177,7 +180,7 @@ $(document).ready(function () {
                         } else {
                             if (confirm("Confirm that you selected " + selectedTeam + " to win by either " + runs + " runs or " + wickets + " wickets.")) {
                                 var team = selectedTeam;
-                                usersRef.child("picks").child(num).update({
+                                myUserRef.child("picks").child(num).update({
                                     team: team,
                                     runs: runs,
                                     wickets: wickets
@@ -198,7 +201,7 @@ $(document).ready(function () {
                 var wpTotal = 0,
                     mpTotal = 0,
                     gspTotal = 0;
-                usersRef.once('value', function (usersSnap) {
+                myUserRef.once('value', function (usersSnap) {
                     fixturesRef.once('value', function (fixturesSnap) {
                         fixturesSnap.forEach(function (childSnapshot) {
                             var matchTime = new Date(childSnapshot.child("datetime").val());
@@ -359,7 +362,11 @@ $(document).ready(function () {
     /*  INDEX   */
     if (currentFile == 'index.html' || currentFile == '') {
         var resultsToday = 0;
+        firebase.database().ref().child("QOTD").once('value', function (snapshot) {
+            $("#QOTD").text(snapshot.child("quote").val());
+        });
         fixturesRef.once('value', function (snapshot) {
+
             snapshot.forEach(function (childSnapshot) {
                 var matchTime = new Date(childSnapshot.child("datetime").val());
                 var diff = matchTime.getTime() - new Date().getTime();
@@ -566,36 +573,40 @@ $(document).ready(function () {
 
     /* ADMIN */
     if (currentFile == 'admin.html') {
-        var numFixtures = 0;
         fixturesRef.on('value', function (snapshot) {
+            console.log("Updating tables...");
             $("#admin-fixtures-table tbody tr").remove();
-            var deleteFixturesAppend = "", addResultsAppend = "", deleteResultsAppend = "";
+            var deleteFixturesAppend = "",
+                addResultsAppend = "",
+                deleteResultsAppend = "";
             var counter = 0;
             snapshot.forEach(function (childSnapshot) {
                 var matchTime = new Date(childSnapshot.child("datetime").val());
+                var diff = matchTime.getTime() - new Date().getTime();
+
                 var team1 = childSnapshot.child("team1").val();
                 var team2 = childSnapshot.child("team2").val();
-                row = document.getElementById("admin-fixtures-table").getElementsByTagName("tbody")[0].insertRow();
-                row.insertCell(0).innerHTML = childSnapshot.key;
-                row.insertCell(1).innerHTML = matchTime.toDateString();
-                row.insertCell(2).innerHTML = matchTime.toLocaleTimeString();
-                row.insertCell(3).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
-                row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
+                if (diff > 0) {
+                    row = document.getElementById("admin-fixtures-table").getElementsByTagName("tbody")[0].insertRow();
+                    row.insertCell(0).innerHTML = childSnapshot.key;
+                    row.insertCell(1).innerHTML = matchTime.toDateString();
+                    row.insertCell(2).innerHTML = matchTime.toLocaleTimeString();
+                    row.insertCell(3).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
+                    row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
+                }
                 var matchDescription = "<option value='" + childSnapshot.key + "'>" + childSnapshot.key + " - " + childSnapshot.child("team1").val() + " vs. " + childSnapshot.child("team2").val() + " on " + new Date(childSnapshot.child("datetime").val()).toDateString() + " at " + new Date(childSnapshot.child("datetime").val()).toLocaleTimeString() + "</option>";
                 deleteFixturesAppend = matchDescription + deleteFixturesAppend;
-                if (childSnapshot.child("teamWon").val() == "") {
+                if (childSnapshot.child("teamWon").val() == "" && diff < 0) {
                     addResultsAppend += matchDescription;
-                }
-                else {
+                } else if (childSnapshot.child("teamWon").val() != ""){
                     deleteResultsAppend += matchDescription;
                 }
                 counter++;
             });
-            numFixtures = counter;
             $("#admin-delete-fixtures-selects").html(deleteFixturesAppend);
             $("#admin-add-results-match-selects").html(addResultsAppend);
             $("#admin-delete-results-selects").html(deleteResultsAppend);
-            $("#admin-add-fixtures-match-selects").html("<option value='" + (numFixtures + 1) + "'>" + (numFixtures + 1) + "</option>");
+            $("#admin-add-fixtures-match-selects").html("<option value='" + (snapshot.numChildren() + 1) + "'>" + (snapshot.numChildren() + 1) + "</option>");
             $("#admin-add-fixtures-team1-selects").html("");
             $("#admin-add-fixtures-team2-selects").html("");
             $("#admin-add-results-team-selects").html("");
@@ -607,57 +618,177 @@ $(document).ready(function () {
                 });
             });
         });
+        
+        var day = "";
+        var dayCounter = 0;
+        fixturesRef.on('value', function (fixturesSnap) {
+            $("#results-table tbody tr").remove();
+            fixturesSnap.forEach(function (childSnapshot) {
+                var matchTime = new Date(childSnapshot.child("datetime").val());
+                var diff = matchTime.getTime() - new Date().getTime();
+
+                if (diff < 0) {
+                    var team1 = childSnapshot.child("team1").val();
+                    var team2 = childSnapshot.child("team2").val();
+                    var teamWon = childSnapshot.child("teamWon").val();
+                    var typeWon = childSnapshot.child("typeWon").val();
+                    var numberWon = childSnapshot.child("numberWon").val();
+
+                    var row = document.getElementById("results-table").getElementsByTagName("tbody")[0].insertRow();
+                    var cell0 = row.insertCell(0);
+                    if (matchTime.toDateString() != day) {
+                        dayCounter++;
+                        day = matchTime.toDateString();
+                        cell0.innerHTML = "<b>" + dayCounter + "</b>";
+                    }
+                    cell0.className = "my-points-table-day";
+
+                    row.insertCell(1).innerHTML = childSnapshot.key;
+                    row.insertCell(2).innerHTML = matchTime.toDateString();
+                    row.insertCell(3).innerHTML = matchTime.toLocaleTimeString();
+                    row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
+                    row.insertCell(5).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
+                    if (teamWon == "Draw") {
+                        row.insertCell(6).innerHTML = "<b>Draw</b>";
+                    } else if (teamWon == "") {
+                        var cell6 = row.insertCell(6);
+                        cell6.innerHTML = "<b>No result added yet.</b>";
+                        cell6.className = "danger";
+                    } else {
+                        row.insertCell(6).innerHTML = "<b>" + teamWon + "</b> by <b>" + numberWon + " " + typeWon + "</b>";
+                    }
+                }
+            });
+        });
 
         $("body").on('submit', '#admin-add-fixtures-form', function () {
-            var num = (numFixtures + 1);
-            var team1 = $("#admin-add-fixtures-team1-selects").find(":selected").text();
-            var team2 = $("#admin-add-fixtures-team2-selects").find(":selected").text();
-            var date = $("#admin-add-fixtures-date").val();
-            var time = $("#admin-add-fixtures-time").val();
+            fixturesRef.once('value', function (snapshot) {
+                isFixtureAdded = true;
+                var num = (snapshot.numChildren() + 1);
+                var team1 = $("#admin-add-fixtures-team1-selects").find(":selected").text();
+                var team2 = $("#admin-add-fixtures-team2-selects").find(":selected").text();
+                var date = $("#admin-add-fixtures-date").val();
+                var time = $("#admin-add-fixtures-time").val();
 
-            console.log("Attempting to add new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time);
-            var diff = new Date(date).getTime() - new Date().getTime();
-            if (diff < 0) {
-                alert("Seems like this is in the past.");
-            } else if (team1 == team2) {
-                alert("Teams are the same.");
-            } else {
-                if (confirm("Do you want to add the new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time + "?")) {
-                    console.log(new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString());
-                    fixturesRef.child(numFixtures + 1).update({
-                        datetime: new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString(),
-                        numberWon: "",
-                        typeWon: "",
-                        teamWon: "",
-                        team1: team1,
-                        team2: team2
-                    });
+                console.log("Attempting to add new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time);
+                var diff = new Date(date).getTime() - new Date().getTime();
+                if (diff < 0) {
+                    alert("Seems like this is in the past.");
+                } else if (team1 == team2) {
+                    alert("Teams are the same.");
+                } else {
+                    if (confirm("Do you want to add the new fixture: " + team1 + " vs. " + team2 + " on " + date + " at " + time + "?")) {
+                        console.log(new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString());
+                        fixturesRef.child(snapshot.numChildren() + 1).set({
+                            datetime: new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString(),
+                            numberWon: "",
+                            typeWon: "",
+                            teamWon: "",
+                            team1: team1,
+                            team2: team2
+                        });
 
-                    alert("Submitted.");
+                        alert("Submitted.");
+                    }
                 }
+            });
+        });
+
+        fixturesRef.on('child_added', function (fixtureAddedSnap) {
+
+            if (isFixtureAdded) {
+                usersRef.once('value', function (usersSnap) {
+                    fixturesRef.once('value', function (fixturesSnap) {
+                        console.log("Adding new fixture, ordering by ascending date");
+                        var pos = fixtureAddedSnap.key;
+                        var prevFixture, newFixture;
+                        var prevPick = [],
+                            newPick = [];
+                        fixturesSnap.forEach(function (childFixturesSnap) {
+                            if (new Date(childFixturesSnap.child("datetime").val()).getTime() >=
+                                new Date(fixtureAddedSnap.child("datetime").val()).getTime()) {
+                                prevFixture = childFixturesSnap.val();
+                                if (pos == fixtureAddedSnap.key) {
+                                    fixturesRef.child(childFixturesSnap.key).set(fixtureAddedSnap.val());
+                                } else {
+                                    fixturesRef.child(childFixturesSnap.key).set(newFixture);
+                                }
+                                newFixture = prevFixture;
+
+                                var counter = 0;
+                                usersSnap.forEach(function (childUsersSnap) {
+                                    prevPick[counter] = childUsersSnap.child("picks").child(childFixturesSnap.key).val();
+                                    if (pos == fixtureAddedSnap.key) {
+                                        usersRef.child(childUsersSnap.key).child("picks").child(childFixturesSnap.key).set({
+                                            team: "",
+                                            runs: "",
+                                            wickets: ""
+                                        });
+                                    } else {
+                                        usersRef.child(childUsersSnap.key).child("picks").child(childFixturesSnap.key).set(newPick[counter]);
+                                    }
+                                    newPick[counter] = prevPick[counter];
+                                    counter++;
+                                });
+
+                                if (pos == fixtureAddedSnap.key) {
+                                    pos = childFixturesSnap.key;
+                                }
+                            }
+                        });
+
+                        //                        usersSnap.forEach(function (childUsersSnap) {
+                        //                            if (!childUsersSnap.child("picks").hasChild(fixtureAddedSnap.key)) {
+                        //                                usersRef.child(childUsersSnap.key).child("picks").child(fixtureAddedSnap.key).set({
+                        //                                    team: "",
+                        //                                    runs: "",
+                        //                                    wickets: ""
+                        //                                });
+                        //                            }
+                        //                        });
+                    });
+                });
             }
+
         });
 
         $("body").on('submit', '#admin-delete-fixtures-form', function () {
             var del = $("#admin-delete-fixtures-selects").find(":selected");
             var delVal = parseInt(del.val());
             if (confirm("Delete the following: Match " + del.text() + "?")) {
-                if (delVal != numFixtures) {
-                    fixturesRef.child(delVal).remove();
-                    var i = delVal + 1;
-                    fixturesRef.once('value', function (miniSnap) {
-                        miniSnap.forEach(function (childMiniSnap) {
-                            if (childMiniSnap.key >= i) {
-                                fixturesRef.child(i - 1).set(childMiniSnap.val());
-                                fixturesRef.child(i).remove();
+                fixturesRef.child(delVal).remove();
+            }
+        });
+
+        fixturesRef.on('child_removed', function (fixtureDeletedSnap) {
+            usersRef.once('value', function (usersSnap) {
+                fixturesRef.once('value', function (fixturesSnap) {
+                    var lastFixture;
+                    fixturesSnap.forEach(function (childLastFixtureSnap) {
+                        lastFixture = parseInt(childLastFixtureSnap.key);
+                    });
+                    isFixtureAdded = false;
+                    if (fixtureDeletedSnap.key == (lastFixture + 1)) {
+                        usersSnap.forEach(function (childUsersSnap) {
+                            usersRef.child(childUsersSnap.key).child("picks").child(fixtureDeletedSnap.key).remove();
+                        });
+                        alert("Deleted.");
+                    } else {
+                        var i = parseInt(fixtureDeletedSnap.key) + 1;
+                        fixturesSnap.forEach(function (childFixturesSnap) {
+                            if (childFixturesSnap.key == i) {
+                                fixturesRef.child(i - 1).set(childFixturesSnap.val());
+                                usersSnap.forEach(function (childUsersSnap) {
+                                    usersRef.child(childUsersSnap.key).child("picks").child(i - 1).set(childUsersSnap.child("picks").child(i).val());
+                                    usersRef.child(childUsersSnap.key).child("picks").child(i).remove();
+                                });
                                 i++;
                             }
                         });
-                    });
-                } else {
-                    fixturesRef.child(delVal).remove();
-                }
-            }
+                        fixturesRef.child(fixturesSnap.numChildren() + 1).remove();
+                    }
+                });
+            });
         });
 
         $("body").on('click', '#admin-add-results-team-selects', function (event) {
@@ -704,55 +835,17 @@ $(document).ready(function () {
                 }
             });
         });
-        
+
         $("body").on('submit', '#admin-delete-results-form', function () {
             var del = $("#admin-delete-results-selects").find(":selected");
             var delVal = parseInt(del.val());
             if (confirm("Delete result from: Match " + del.text() + "?")) {
-                    fixturesRef.child(delVal).update ({
-                        teamWon: "",
-                        typeWon: "",
-                        numberWon: ""
-                    });
+                fixturesRef.child(delVal).update({
+                    teamWon: "",
+                    typeWon: "",
+                    numberWon: ""
+                });
             }
-        });
-        
-        var day = "";
-        var dayCounter = 0;
-        fixturesRef.once('value', function (fixturesSnap) {
-            fixturesSnap.forEach(function (childSnapshot) {
-                var matchTime = new Date(childSnapshot.child("datetime").val());
-                var diff = matchTime.getTime() - new Date().getTime();
-
-                if (diff < 0 && childSnapshot.child("teamWon").val() != "") {
-                    var team1 = childSnapshot.child("team1").val();
-                    var team2 = childSnapshot.child("team2").val();
-                    var teamWon = childSnapshot.child("teamWon").val();
-                    var typeWon = childSnapshot.child("typeWon").val();
-                    var numberWon = childSnapshot.child("numberWon").val();
-
-                    var row = document.getElementById("results-table").getElementsByTagName("tbody")[0].insertRow();
-                    var cell0 = row.insertCell(0);
-                    if (matchTime.toDateString() != day) {
-                        dayCounter++;
-                        day = matchTime.toDateString();
-                        cell0.innerHTML = "<b>" + dayCounter + "</b>";
-                    }
-                    cell0.className = "my-points-table-day";
-
-                    row.insertCell(1).innerHTML = childSnapshot.key;
-                    row.insertCell(2).innerHTML = matchTime.toDateString();
-                    row.insertCell(3).innerHTML = matchTime.toLocaleTimeString();
-                    row.insertCell(4).innerHTML = "<img class='fa fa-fw' src='images/" + team1 + ".png'/> " + team1;
-                    row.insertCell(5).innerHTML = "<img class='fa fa-fw' src='images/" + team2 + ".png'/> " + team2;
-                        if (teamWon == "Draw") {
-                            row.insertCell(6).innerHTML = "<b>Draw</b>";
-                        } else {
-                            row.insertCell(6).innerHTML = "<b>" + teamWon + "</b> by <b>" + numberWon + " " + typeWon + "</b>";
-                        }
-                }
-            });
-
         });
 
     }
