@@ -154,7 +154,7 @@ $(document).ready(function () {
                     var current = $(this);
 
                     fixturesRef.once('value').then(function (snapshot) {
-                        var num = current.closest(".panel").attr("id").substring(0, 1);
+                        var num = current.closest(".panel").attr("id").split('-')[0];
                         var selectedTeam = current.find(".team-options").find(".active").find("h4").text();
                         var runs = current.find('.runs-options').find(':selected').text();
                         var wickets = current.find('.wickets-options').find(':selected').text();
@@ -366,7 +366,6 @@ $(document).ready(function () {
             $("#QOTD").text(snapshot.child("quote").val());
         });
         fixturesRef.once('value', function (snapshot) {
-
             snapshot.forEach(function (childSnapshot) {
                 var matchTime = new Date(childSnapshot.child("datetime").val());
                 var diff = matchTime.getTime() - new Date().getTime();
