@@ -154,7 +154,7 @@ $(document).ready(function () {
                     var current = $(this);
 
                     fixturesRef.once('value').then(function (snapshot) {
-                        var num = current.closest(".panel").attr("id").substring(0, 1);
+                        var num = current.closest(".panel").attr("id").split('-')[0];
                         var selectedTeam = current.find(".team-options").find(".active").find("h4").text();
                         var runs = current.find('.runs-options').find(':selected').text();
                         var wickets = current.find('.wickets-options').find(':selected').text();
