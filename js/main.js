@@ -356,7 +356,7 @@ $(document).ready(function () {
     });
 
     $("#demo li a").on('click', function (event) {
-        localStorage.setItem("selectedRepublic", $(this).text());
+        localStorage.setItem("selectedRepublic", $(this).data("value"));
     });
 
     /*  INDEX   */
@@ -489,6 +489,7 @@ $(document).ready(function () {
     /*  REPUBLIC    */
     if (currentFile == 'republics.html') {
         var selectedRepublic = localStorage.getItem("selectedRepublic");
+        console.log("Current republic: " + selectedRepublic);
         $("#republics-page-header").text(selectedRepublic);
         var image = "images/" + selectedRepublic + ".png";
         $("#republics-breadcrumb").html("<img class='fa fa-fw' src='" + image + "'/> " + selectedRepublic);
@@ -510,7 +511,7 @@ $(document).ready(function () {
                 $("#republics-slogan").text("It's just sex with someone I love.");
                 break;
             case "Yard":
-                $("#republics-slogan").text();
+                $("#republics-slogan").text("The one next to Wankers.");
                 break;
             case "Palace":
                 $("#republics-slogan").text();
@@ -520,6 +521,12 @@ $(document).ready(function () {
                 break;
             case "Bach":
                 $("#republics-slogan").text("Don't look at this page.");
+                break;
+            case "Oude Molen":
+                $("#republics-slogan").text("Lol.");
+                break;
+            case "Country Members":
+                $("#republics-slogan").text("Die oumanne kom ALTYD terug. ALTYYYYYD!");
                 break;
         }
     }
@@ -792,6 +799,7 @@ $(document).ready(function () {
 
         $("body").on('click', '#admin-add-results-team-selects', function (event) {
             event.preventDefault();
+            
             if ($(this).val() == 'Draw') {
                 $("#admin-add-results-number-fieldset").prop("disabled", true);
                 $("#admin-add-results-type-fieldset").prop("disabled", true);
