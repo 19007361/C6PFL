@@ -9,7 +9,7 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Results | Carry 6 Packer Fantasy League</title>
+    <title>Carry 6 Packer Fantasy League</title>
 
     <link rel="shortcut icon" type="image/x-icon" href="images/logo.png">
 
@@ -75,19 +75,19 @@
                     <li>
                         <a href="index.html"><i class="fa fa-fw fa-dashboard"></i> Dashboard</a>
                     </li>
-                    <li>
+                    <li class="active">
                         <a href="leaderboard.html"><i class="fa fa-fw fa-graduation-cap"></i> Leaderboard</a>
                     </li>
-                    <li class="nav-logged-in-only">
+                    <li>
                         <a href="myPoints.html"><i class="fa fa-fw fa-smile-o"></i> My Points</a>
                     </li>
-                    <li class="nav-logged-in-only">
+                    <li>
                         <a href="predict.html"><i class="fa fa-fw fa-bullhorn"></i> Predict</a>
                     </li>
                     <li>
                         <a href="fixtures.html"><i class="fa fa-fw fa-wrench"></i> Fixtures</a>
                     </li>
-                     <li class="active">
+                     <li>
                         <a href="results.html"><i class="fa fa-fw fa-trophy"></i> Results</a>
                     </li>
                     <li>
@@ -141,14 +141,14 @@
                 <div class="row">
                     <div class="col-lg-12">
                         <h1 class="page-header">
-                            Results
+                            Leaderboard
                         </h1>
                         <ol class="breadcrumb">
                             <li>
                                 <i class="fa fa-dashboard"></i>  <a href="index.html">Dashboard</a>
                             </li>
                             <li class="active">
-                                <i class="fa fa-trophy"></i> Results
+                                <i class="fa fa-graduation-cap"></i> Leaderboard
                             </li>
                         </ol>
                     </div>
@@ -157,16 +157,14 @@
                 
                 <div class="row">
                     <div class="col-lg-12">
+                        <h2><i class="fa fa-globe" aria-hidden="true"></i> Global</h2>
                         <div class="table-responsive">
-                            <table id="results-table" class="table table-bordered table-hover table-striped" rules="groups">
+                            <table id="global-leaderboard" class="table table-bordered table-hover table-striped" rules="groups">
                                 <thead>
                                     <tr>
-                                        <th>Day</th>
-                                        <th>Match</th>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th colspan="2">Teams</th>
-                                        <th>Result</th>
+                                        <th></th>
+                                        <th>Name</th>
+                                        <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -175,6 +173,65 @@
                         </div>
                     </div>
                 </div>
+                
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2><i class="fa fa-flag" aria-hidden="true"></i> Republics Head-To-Head</h2>
+                        <div class="table-responsive">
+                            <table id="republics-head-to-head-leaderboard" class="table table-bordered table-hover table-striped" rules="groups">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>MVP</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+<!--
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2><i class="fa fa-users" aria-hidden="true"></i> Oumanne Vs Newcomers</h2>
+                        <div class="table-responsive">
+                            <table id="oumanne-newcomers-leaderboard" class="table table-bordered table-hover table-striped" rules="groups">
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>MVP</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-lg-12">
+                        <h2><i class="fa fa-calendar" aria-hidden="true"></i> Years Head-To-Head</h2>
+                        <div class="table-responsive">
+                            <table id="years-leaderboard" class="table table-bordered table-hover table-striped" rules="groups">
+                                <thead>
+                                    <tr>
+                                        <th>Year</th>
+                                        <th>MVP</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+-->
 
             </div>
             <!-- /.container-fluid -->
