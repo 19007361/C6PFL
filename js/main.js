@@ -540,7 +540,7 @@ $(document).ready(function () {
                             } else {
                                 row.insertCell(0);
                             }
-                            row.insertCell(1).innerHTML = usersSnap.child(keys[i]).child("name").val() + " - <b>" + usersSnap.child(keys[i]).child("name").val();
+                            row.insertCell(1).innerHTML = usersSnap.child(keys[i]).child("name").val() + " - <b>" + totalsSnap.child(keys[i]).val() + " points</b>";
                             cells[republic] = row.insertCell(2);
                         }
                         totals[republic] += parseInt(totalsSnap.val()[keys[i]]);
