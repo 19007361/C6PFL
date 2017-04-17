@@ -15,6 +15,7 @@ $(document).ready(function () {
         var usersRef = firebase.database().ref().child("users");
         var fixturesRef = firebase.database().ref().child("fixtures");
         var teamsRef = firebase.database().ref().child("teams");
+        var totalsRef = firebase.database().ref().child("totals");
         var dbauth = firebase.auth();
         var studNo;
         var currentUser;
@@ -241,7 +242,7 @@ $(document).ready(function () {
                                 }
 
                                 var mp = 0;
-                                if (myRuns != "") {
+                                if (myRuns != "" && wp == 1) {
                                     if (typeWon == "runs" || typeWon == "draw") {
                                         var runDiff = Math.abs(numberWon - myRuns);
                                         if (runDiff <= 5) {
@@ -356,7 +357,7 @@ $(document).ready(function () {
     });
 
     $("#demo li a").on('click', function (event) {
-        localStorage.setItem("selectedRepublic", $(this).text());
+        localStorage.setItem("selectedRepublic", $(this).data("value"));
     });
 
     /*  INDEX   */
@@ -366,7 +367,6 @@ $(document).ready(function () {
             $("#QOTD").text(snapshot.child("quote").val());
         });
         fixturesRef.once('value', function (snapshot) {
-
             snapshot.forEach(function (childSnapshot) {
                 var matchTime = new Date(childSnapshot.child("datetime").val());
                 var diff = matchTime.getTime() - new Date().getTime();
@@ -487,9 +487,78 @@ $(document).ready(function () {
         });
     }
 
+    /*  LEADERBOARD   */
+    if (currentFile == 'leaderboard.html') {
+
+        totalsRef.orderByValue().once('value', function (totalsSnap) {
+            var counter = 0;
+            totalsSnap.forEach(function (countTotals) {
+                counter++;
+            });
+
+            var i = 0;
+            totalsSnap.forEach(function (childTotalsSnap) {
+
+                if (i >= counter - 20) {
+                    usersRef.child(childTotalsSnap.key).once('value', function (childUsersSnap) {
+                        var row = document.getElementById("global-leaderboard").getElementsByTagName("tbody")[0].insertRow(0);
+                        if (childUsersSnap.hasChild("republic")) {
+                            row.insertCell(0).innerHTML = "<img class='fa fa-fw' src='images/" + childUsersSnap.child("republic").val() + ".png'/> ";
+                        } else {
+                            row.insertCell(0);
+                        }
+                        row.insertCell(1).innerHTML = childUsersSnap.child("name").val();
+                        row.insertCell(2).innerHTML = childTotalsSnap.val();
+                    });
+                }
+                i++;
+            });
+
+            usersRef.once('value', function (usersSnap) {
+                teamsRef.once('value', function (teamsSnap) {
+                    var totals = [];
+                    var cells = [];
+                    teamsSnap.forEach(function (childTeamsSnap) {
+                        totals[childTeamsSnap.key] = 0;
+                        cells.push(childTeamsSnap.key);
+                    });
+                    totals["Newcomers"] = 0;
+                    cells.push("Newcomers");
+
+                    var keys = Object.keys(totalsSnap.val()).sort(function (a, b) {
+                        return totalsSnap.val()[b] - totalsSnap.val()[a];
+                    });
+                    for (var i = 0; i < keys.length; i++) {
+                        var republic = usersSnap.child(keys[i]).child("republic").val();
+                        if (republic == null) {
+                            republic = "Newcomers";
+                        }
+                        if (cells[republic] == undefined) {
+                            var row = document.getElementById("republics-head-to-head-leaderboard").getElementsByTagName("tbody")[0].insertRow();
+                            if (republic != "Newcomers") {
+                                row.insertCell(0).innerHTML = "<img class='fa fa-fw' src='images/" + usersSnap.child(keys[i]).child("republic").val() + ".png'/> ";
+                            } else {
+                                row.insertCell(0);
+                            }
+                            row.insertCell(1).innerHTML = usersSnap.child(keys[i]).child("name").val() + " - <b>" + usersSnap.child(keys[i]).child("name").val();
+                            cells[republic] = row.insertCell(2);
+                        }
+                        totals[republic] += parseInt(totalsSnap.val()[keys[i]]);
+                    }
+                    for (var key in cells) {
+                        cells[key].innerHTML = totals[key];
+                    }
+                });
+            });
+
+        });
+
+    }
+
     /*  REPUBLIC    */
     if (currentFile == 'republics.html') {
         var selectedRepublic = localStorage.getItem("selectedRepublic");
+        console.log("Current republic: " + selectedRepublic);
         $("#republics-page-header").text(selectedRepublic);
         var image = "images/" + selectedRepublic + ".png";
         $("#republics-breadcrumb").html("<img class='fa fa-fw' src='" + image + "'/> " + selectedRepublic);
@@ -511,7 +580,7 @@ $(document).ready(function () {
                 $("#republics-slogan").text("It's just sex with someone I love.");
                 break;
             case "Yard":
-                $("#republics-slogan").text();
+                $("#republics-slogan").text("The one next to Wankers.");
                 break;
             case "Palace":
                 $("#republics-slogan").text();
@@ -522,7 +591,28 @@ $(document).ready(function () {
             case "Bach":
                 $("#republics-slogan").text("Don't look at this page.");
                 break;
+            case "Oude Molen":
+                $("#republics-slogan").text("Lol.");
+                break;
+            case "Country Members":
+                $("#republics-slogan").text("Die oumanne kom ALTYD terug. ALTYYYYYD!");
+                break;
         }
+
+        totalsRef.orderByValue().once('value', function (totalsSnap) {
+            totalsSnap.forEach(function (childTotalsSnap) {
+                usersRef.child(childTotalsSnap.key).once('value', function (childUsersSnap) {
+                    if (childUsersSnap.child("republic").val() == selectedRepublic) {
+                        var row = document.getElementById("republic-leaderboard").getElementsByTagName("tbody")[0].insertRow();
+                        row.insertCell(0).innerHTML = childUsersSnap.child("name").val();
+                        console.log(childTotalsSnap.val());
+                        row.insertCell(1).innerHTML = childTotalsSnap.val();
+                    }
+                });
+            });
+        });
+
+
     }
 
     /* RESULTS */
@@ -598,7 +688,7 @@ $(document).ready(function () {
                 deleteFixturesAppend = matchDescription + deleteFixturesAppend;
                 if (childSnapshot.child("teamWon").val() == "" && diff < 0) {
                     addResultsAppend += matchDescription;
-                } else if (childSnapshot.child("teamWon").val() != ""){
+                } else if (childSnapshot.child("teamWon").val() != "") {
                     deleteResultsAppend += matchDescription;
                 }
                 counter++;
@@ -618,11 +708,11 @@ $(document).ready(function () {
                 });
             });
         });
-        
-        var day = "";
-        var dayCounter = 0;
+
         fixturesRef.on('value', function (fixturesSnap) {
             $("#results-table tbody tr").remove();
+            var day = "";
+            var dayCounter = 0;
             fixturesSnap.forEach(function (childSnapshot) {
                 var matchTime = new Date(childSnapshot.child("datetime").val());
                 var diff = matchTime.getTime() - new Date().getTime();
@@ -663,39 +753,40 @@ $(document).ready(function () {
 
         $("body").on('submit', '#admin-add-fixtures-form', function () {
             fixturesRef.once('value', function (snapshot) {
-                isFixtureAdded = true;
-                var num = (snapshot.numChildren() + 1);
-                var team1 = $("#admin-add-fixtures-team1-selects").find(":selected").text();
-                var team2 = $("#admin-add-fixtures-team2-selects").find(":selected").text();
-                var date = $("#admin-add-fixtures-date").val();
-                var time = $("#admin-add-fixtures-time").val();
+                usersRef.once('value', function (usersSnap) {
+                    isFixtureAdded = true;
+                    var num = (snapshot.numChildren() + 1);
+                    var team1 = $("#admin-add-fixtures-team1-selects").find(":selected").text();
+                    var team2 = $("#admin-add-fixtures-team2-selects").find(":selected").text();
+                    var date = $("#admin-add-fixtures-date").val();
+                    var time = $("#admin-add-fixtures-time").val();
 
-                console.log("Attempting to add new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time);
-                var diff = new Date(date).getTime() - new Date().getTime();
-                if (diff < 0) {
-                    alert("Seems like this is in the past.");
-                } else if (team1 == team2) {
-                    alert("Teams are the same.");
-                } else {
-                    if (confirm("Do you want to add the new fixture: " + team1 + " vs. " + team2 + " on " + date + " at " + time + "?")) {
-                        console.log(new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString());
-                        fixturesRef.child(snapshot.numChildren() + 1).set({
-                            datetime: new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString(),
-                            numberWon: "",
-                            typeWon: "",
-                            teamWon: "",
-                            team1: team1,
-                            team2: team2
-                        });
-
-                        alert("Submitted.");
+                    console.log("Attempting to add new fixture: Match " + num + ", " + team1 + " vs. " + team2 + " on " + date + " at " + time);
+                    var diff = new Date(date).getTime() - new Date().getTime();
+                    if (diff < 0) {
+                        alert("Seems like this is in the past.");
+                    } else if (team1 == team2) {
+                        alert("Teams are the same.");
+                    } else {
+                        if (confirm("Do you want to add the new fixture: " + team1 + " vs. " + team2 + " on " + date + " at " + time + "?")) {
+                            console.log(new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString());
+                            fixturesRef.child(snapshot.numChildren() + 1).set({
+                                datetime: new Date(date).toDateString() + " " + new Date(date + " " + time).toTimeString(),
+                                numberWon: "",
+                                typeWon: "",
+                                teamWon: "",
+                                team1: team1,
+                                team2: team2
+                            });
+                            alert("Submitted.");
+                        }
                     }
-                }
+                });
             });
         });
 
+        //TODO: UPDATE GSP WHEN ADDING FIXTURE!!
         fixturesRef.on('child_added', function (fixtureAddedSnap) {
-
             if (isFixtureAdded) {
                 usersRef.once('value', function (usersSnap) {
                     fixturesRef.once('value', function (fixturesSnap) {
@@ -704,12 +795,22 @@ $(document).ready(function () {
                         var prevFixture, newFixture;
                         var prevPick = [],
                             newPick = [];
+                        var day = "";
+                        var dayCounter = 0;
                         fixturesSnap.forEach(function (childFixturesSnap) {
+                            var datetime = new Date(childFixturesSnap.child("datetime").val());
+                            if (datetime.toDateString() != day) {
+                                dayCounter++;
+                                day = datetime.toDateString();
+                            }
                             if (new Date(childFixturesSnap.child("datetime").val()).getTime() >=
                                 new Date(fixtureAddedSnap.child("datetime").val()).getTime()) {
                                 prevFixture = childFixturesSnap.val();
                                 if (pos == fixtureAddedSnap.key) {
                                     fixturesRef.child(childFixturesSnap.key).set(fixtureAddedSnap.val());
+                                    fixturesRef.child(childFixturesSnap.key).update({
+                                        day: dayCounter
+                                    });
                                 } else {
                                     fixturesRef.child(childFixturesSnap.key).set(newFixture);
                                 }
@@ -722,10 +823,22 @@ $(document).ready(function () {
                                         usersRef.child(childUsersSnap.key).child("picks").child(childFixturesSnap.key).set({
                                             team: "",
                                             runs: "",
-                                            wickets: ""
+                                            wickets: "",
+                                            points: {
+                                                mp: "0",
+                                                wp: "0"
+                                            }
                                         });
+
+                                        var updates = {};
+                                        updates[dayCounter] = '0';
+                                        usersRef.child(childUsersSnap.key).child("gsp").update(updates);
+
                                     } else {
                                         usersRef.child(childUsersSnap.key).child("picks").child(childFixturesSnap.key).set(newPick[counter]);
+                                        if (!childUsersSnap.child("gsp").hasChild(dayCounter)) {
+
+                                        }
                                     }
                                     newPick[counter] = prevPick[counter];
                                     counter++;
@@ -737,15 +850,6 @@ $(document).ready(function () {
                             }
                         });
 
-                        //                        usersSnap.forEach(function (childUsersSnap) {
-                        //                            if (!childUsersSnap.child("picks").hasChild(fixtureAddedSnap.key)) {
-                        //                                usersRef.child(childUsersSnap.key).child("picks").child(fixtureAddedSnap.key).set({
-                        //                                    team: "",
-                        //                                    runs: "",
-                        //                                    wickets: ""
-                        //                                });
-                        //                            }
-                        //                        });
                     });
                 });
             }
@@ -760,6 +864,7 @@ $(document).ready(function () {
             }
         });
 
+        //TODO: UPDATE GSP WHEN REMOVING FIXTURE!!
         fixturesRef.on('child_removed', function (fixtureDeletedSnap) {
             usersRef.once('value', function (usersSnap) {
                 fixturesRef.once('value', function (fixturesSnap) {
@@ -793,6 +898,7 @@ $(document).ready(function () {
 
         $("body").on('click', '#admin-add-results-team-selects', function (event) {
             event.preventDefault();
+
             if ($(this).val() == 'Draw') {
                 $("#admin-add-results-number-fieldset").prop("disabled", true);
                 $("#admin-add-results-type-fieldset").prop("disabled", true);
@@ -804,38 +910,112 @@ $(document).ready(function () {
 
         $("body").on('submit', '#admin-add-results-form', function () {
             fixturesRef.once('value', function (snap) {
-                var num = $("#admin-add-results-match-selects").find(":selected").val();
-                var team1 = snap.child(num).child("team1").val();
-                var team2 = snap.child(num).child("team2").val();
-                var teamWon = $("#admin-add-results-team-selects").find(":selected").val();
-                var numberWon = $("#admin-add-results-number-input").val();
-                var typeWon = $("#admin-add-results-type-selects").find(":selected").val();
-                if (teamWon == team1 || teamWon == team2) {
-                    if (teamWon == "Draw") {
-                        if (confirm("Adding result: Draw?")) {
-                            fixturesRef.child(num).update({
-                                numberWon: "0",
-                                typeWon: "Draw",
-                                teamWon: "draw"
-                            });
-                            alert("Added result: Draw");
+                totalsRef.once('value', function (totalsSnap) {
+                    var num = $("#admin-add-results-match-selects").find(":selected").val();
+                    var day = snap.child(num).child("day").val();
+                    var team1 = snap.child(num).child("team1").val();
+                    var team2 = snap.child(num).child("team2").val();
+                    var teamWon = $("#admin-add-results-team-selects").find(":selected").val();
+                    var numberWon = $("#admin-add-results-number-input").val();
+                    var typeWon = $("#admin-add-results-type-selects").find(":selected").val();
+                    if (teamWon == team1 || teamWon == team2) {
+                        //TODO: Fix Draw result!
+                        if (teamWon == "Draw") {
+                            if (confirm("Adding result: Draw?")) {
+                                fixturesRef.child(num).update({
+                                    numberWon: "0",
+                                    typeWon: "Draw",
+                                    teamWon: "draw"
+                                });
+                                alert("Added result: Draw");
+                            }
+                        } else {
+                            if (confirm("Adding result: " + teamWon + " won by " + numberWon + " " + typeWon + "?")) {
+                                fixturesRef.child(num).update({
+                                    numberWon: numberWon,
+                                    typeWon: typeWon,
+                                    teamWon: teamWon
+                                });
+
+                                usersRef.once('value', function (usersSnap) {
+                                    usersSnap.forEach(function (childUsersSnap) {
+                                        var myTeam = childUsersSnap.child("picks").child(num).child("team").val();
+                                        if (myTeam != null) {
+                                            var myRuns = childUsersSnap.child("picks").child(num).child("runs").val();
+                                            var myWickets = parseInt(childUsersSnap.child("picks").child(num).child("wickets").val());
+                                            var wp = (myTeam == teamWon) ? 1 : 0;
+
+                                            var mp = 0;
+                                            if (myRuns != "" && wp == 1) {
+                                                myRuns = parseInt(myRuns);
+                                                if (typeWon == "runs" || typeWon == "draw") {
+                                                    var runDiff = Math.abs(numberWon - myRuns);
+                                                    if (runDiff <= 5) {
+                                                        mp = 0.75;
+                                                    } else if (runDiff <= 10) {
+                                                        mp = 0.5;
+                                                    } else if (runDiff <= 20) {
+                                                        mp = 0.25;
+                                                    }
+                                                }
+                                                if (typeWon == "wickets") {
+                                                    var wicketDiff = Math.abs(numberWon - myWickets);
+                                                    if (wicketDiff == 0) {
+                                                        mp = 0.75;
+                                                    } else if (wicketDiff == 1) {
+                                                        mp = 0.5;
+                                                    } else if (wicketDiff == 2) {
+                                                        mp = 0.25;
+                                                    }
+                                                }
+                                            }
+
+                                            var updates = {};
+                                            updates["mp"] = mp;
+                                            usersRef.child(childUsersSnap.key).child("picks").child(num).child("points").update(updates);
+
+                                            updates = {};
+                                            updates["wp"] = wp;
+                                            usersRef.child(childUsersSnap.key).child("picks").child(num).child("points").update(updates);
+
+                                            var currDayTotal = parseInt(childUsersSnap.child("total").child(day).val());
+
+                                            updates = {};
+                                            updates[day] = currDayTotal + wp + mp;
+                                            usersRef.child(childUsersSnap.key).child("total").update(updates);
+
+                                            var currTotal = parseInt(totalsSnap.child(childUsersSnap.key).val());
+                                            updates = {};
+                                            updates[childUsersSnap.key] = currTotal + wp + mp;
+                                            totalsRef.update(updates);
+                                            if (childUsersSnap.child("gsp").child(day).val() == 1 && wp == 0) {
+
+                                                updates = {};
+                                                updates[day] = 0;
+                                                usersRef.child(childUsersSnap.key).child("gsp").update(updates);
+                                                updates = {};
+                                                updates[day] = currDayTotal + wp + mp - 1;
+                                                usersRef.child(childUsersSnap.key).child("total").update(updates);
+
+                                                updates = {};
+                                                updates[childUsersSnap.key] = currTotal + wp + mp - 1;
+                                                totalsRef.update(updates);
+                                            }
+                                        }
+                                    });
+                                    alert("Added result: " + teamWon + " won by " + numberWon + " " + typeWon);
+                                });
+
+                            }
                         }
                     } else {
-                        if (confirm("Adding result: " + teamWon + " won by " + numberWon + " " + typeWon + "?")) {
-                            fixturesRef.child(num).update({
-                                numberWon: numberWon,
-                                typeWon: typeWon,
-                                teamWon: teamWon
-                            });
-                            alert("Added result: " + teamWon + " won by " + numberWon + " " + typeWon);
-                        }
+                        alert("This team wasn't part of this match.");
                     }
-                } else {
-                    alert("This team wasn't part of this match.");
-                }
+                });
             });
         });
 
+        //TODO: UPDATE POINTS WHEN REMOVING RESULT!
         $("body").on('submit', '#admin-delete-results-form', function () {
             var del = $("#admin-delete-results-selects").find(":selected");
             var delVal = parseInt(del.val());
