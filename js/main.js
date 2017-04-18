@@ -101,7 +101,7 @@ $(document).ready(function () {
                                 }
                                 alertBox += "</div>";
                                 if (diff < 1000 * 60 * 60 * 24 * 3) {
-                                    $("#predict-alerts").append(alertBox);
+                                    //                                    $("#predict-alerts").append(alertBox);
                                 }
 
                                 predictBox += "</b></small></div>" +
@@ -127,12 +127,12 @@ $(document).ready(function () {
                         });
 
                         $(".runs-options").each(function () {
-                            for (var i = 5; i <= 200; i += 5) {
+                            for (var i = 1; i <= 100; i++) {
                                 $(this).append("<option value='" + i + "'>" + i + "</option>");
                             }
                         });
                         $(".wickets-options").each(function () {
-                            for (var i = 1; i <= 10; i++) {
+                            for (var i = 1; i <= 6; i++) {
                                 $(this).append("<option>" + i + "</option>");
                             }
                         });
@@ -331,7 +331,7 @@ $(document).ready(function () {
                 $("#reset-password-option").addClass("hidden");
                 $(".nav-logged-in-only").addClass("hidden");
                 $("#view-points-logged-in-only").addClass("hidden");
-                if (currentFile !== 'login.html' && currentFile !== 'index.html' && currentFile !== 'fixtures.html' && currentFile !== 'republics.html' && currentFile !== 'results.html' && currentFile !== '') {
+                if (currentFile !== 'login.html' && currentFile !== 'index.html' && currentFile !== 'fixtures.html' && currentFile !== 'republics.html' && currentFile !== 'results.html' && currentFile !== '' && currentFile !== 'leaderboard.html' && currentFile !== 'rules.html') {
                     alert("Not logged in.");
                     window.location.href = 'login.html';
                 }
@@ -407,7 +407,7 @@ $(document).ready(function () {
                     }
                     alertBox += "</div>";
                     if (diff < 1000 * 60 * 60 * 24 * 3) {
-                        $("#predict-alerts").append(alertBox);
+                        //                        $("#predict-alerts").append(alertBox);
                         fixturesRow.insertCell(0).innerHTML = childSnapshot.key;
                         fixturesRow.insertCell(1).innerHTML = matchTime.toDateString();
                         fixturesRow.insertCell(2).innerHTML = matchTime.toLocaleTimeString();
@@ -574,7 +574,7 @@ $(document).ready(function () {
                 $("#republics-slogan").text("We are also a republic.");
                 break;
             case "Dublin":
-                $("#republics-slogan").text("Shoulder to shoulder, we'll answer Dublin's call.");
+                $("#republics-slogan").text("Come out, ye Black and Tans.");
                 break;
             case "Wankers":
                 $("#republics-slogan").text("It's just sex with someone I love.");
@@ -583,10 +583,10 @@ $(document).ready(function () {
                 $("#republics-slogan").text("The one next to Wankers.");
                 break;
             case "Palace":
-                $("#republics-slogan").text();
+                $("#republics-slogan").text("F*** Israel");
                 break;
             case "Oord":
-                $("#republics-slogan").text();
+                $("#republics-slogan").text("Where sluipers gather to rest.");
                 break;
             case "Bach":
                 $("#republics-slogan").text("Don't look at this page.");
@@ -1029,6 +1029,20 @@ $(document).ready(function () {
         });
 
     }
-
+    
+    $(".navbar-header").append("<button type='button' class='btn' id='12A-replacer-button'>Replace 'ertien with 12A</button>");
+    function walkText(node) {
+        if (node.nodeType == 3) {
+            node.data = node.data.replace(/13/g, "12A");
+        }
+        if (node.nodeType == 1 && node.nodeName != "SCRIPT") {
+            for (var i = 0; i < node.childNodes.length; i++) {
+                walkText(node.childNodes[i]);
+            }
+        }
+    }
+    $("#12A-replacer-button").click(function() {
+        walkText(document.body);
+    });
 
 });
