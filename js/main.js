@@ -1015,22 +1015,111 @@ $(document).ready(function () {
             });
         });
 
-        //TODO: UPDATE POINTS WHEN REMOVING RESULT!
         $("body").on('submit', '#admin-delete-results-form', function () {
             var del = $("#admin-delete-results-selects").find(":selected");
             var delVal = parseInt(del.val());
             if (confirm("Delete result from: Match " + del.text() + "?")) {
-                fixturesRef.child(delVal).update({
-                    teamWon: "",
-                    typeWon: "",
-                    numberWon: ""
+                fixturesRef.once('value', function (fixturesSnap) {
+                    usersRef.once('value', function (usersSnap) {
+                        totalsRef.once('value', function (totalsSnap) {
+                            var wrongTeamWon = fixturesSnap.child(delVal).child("teamWon").val();
+                            var wrongTypeWon = fixturesSnap.child(delVal).child("typeWon").val();
+                            var wrongNumberWon = fixturesSnap.child(delVal).child("numberWon").val();
+                            fixturesRef.child(delVal).update({
+                                teamWon: "",
+                                typeWon: "",
+                                numberWon: ""
+                            });
+
+                            var day = fixturesSnap.child(delVal).child("day").val();
+                            usersSnap.forEach(function (childUsersSnap) {
+                                var myTeam = childUsersSnap.child("picks").child(delVal).child("team").val();
+                                if (myTeam != null) {
+                                    var myRuns = childUsersSnap.child("picks").child(delVal).child("runs").val();
+                                    var myWickets = parseInt(childUsersSnap.child("picks").child(delVal).child("wickets").val());
+                                    var wp = (myTeam == wrongTeamWon) ? 1 : 0;
+
+                                    var mp = 0;
+                                    if (myRuns != "" && wp == 1) {
+                                        myRuns = parseInt(myRuns);
+                                        if (wrongTypeWon == "runs" || wrongTypeWon == "draw") {
+                                            var runDiff = Math.abs(wrongNumberWon - myRuns);
+                                            if (runDiff <= 5) {
+                                                mp = 0.75;
+                                            } else if (runDiff <= 10) {
+                                                mp = 0.5;
+                                            } else if (runDiff <= 20) {
+                                                mp = 0.25;
+                                            }
+                                        }
+                                        if (wrongTypeWon == "wickets") {
+                                            var wicketDiff = Math.abs(wrongNumberWon - myWickets);
+                                            if (wicketDiff == 0) {
+                                                mp = 0.75;
+                                            } else if (wicketDiff == 1) {
+                                                mp = 0.5;
+                                            } else if (wicketDiff == 2) {
+                                                mp = 0.25;
+                                            }
+                                        }
+                                    }
+
+                                    var updates = {};
+                                    updates["mp"] = 0;
+                                    usersRef.child(childUsersSnap.key).child("picks").child(delVal).child("points").update(updates);
+
+                                    updates = {};
+                                    updates["wp"] = 0;
+                                    usersRef.child(childUsersSnap.key).child("picks").child(delVal).child("points").update(updates);
+
+                                    var currDayTotal = parseInt(childUsersSnap.child("total").child(day).val());
+
+                                    updates = {};
+                                    updates[day] = currDayTotal - wp - mp;
+                                    usersRef.child(childUsersSnap.key).child("total").update(updates);
+
+                                    var currTotal = parseInt(totalsSnap.child(childUsersSnap.key).val());
+                                    updates = {};
+                                    updates[childUsersSnap.key] = currTotal - wp - mp;
+                                    totalsRef.update(updates);
+                                    if (childUsersSnap.child("gsp").child(day).val() == 0 && wp == 0) {
+                                        var gspWasOne = true;
+                                        fixturesSnap.forEach(function (childFixturesSnap) {
+                                            if (childFixturesSnap.key != delVal) {
+                                                if (childFixturesSnap.child("day").val() == day) {
+                                                    if (childUsersSnap.child("picks").child(childFixturesSnap.key).child("points").child("wp").val() != 1) {
+                                                        gspWasOne = false;
+                                                    }
+                                                }
+                                            }
+
+                                        });
+                                        if (gspWasOne) {
+                                            updates = {};
+                                            updates[day] = 1;
+                                            usersRef.child(childUsersSnap.key).child("gsp").update(updates);
+                                            updates = {};
+                                            updates[day] = currDayTotal - wp - mp + 1;
+                                            usersRef.child(childUsersSnap.key).child("total").update(updates);
+
+                                            updates = {};
+                                            updates[childUsersSnap.key] = currTotal - wp - mp + 1;
+                                            totalsRef.update(updates);
+                                        }
+                                    }
+                                }
+                            });
+                            alert("Removed wrong result: " + wrongTeamWon + " won by " + wrongNumberWon + " " + wrongTypeWon);
+                        });
+                    });
                 });
             }
         });
 
     }
-    
+
     $(".navbar-header").append("<button type='button' class='btn' id='12A-replacer-button'>Replace 'ertien with 12A</button>");
+
     function walkText(node) {
         if (node.nodeType == 3) {
             node.data = node.data.replace(/13/g, "12A");
@@ -1041,7 +1130,7 @@ $(document).ready(function () {
             }
         }
     }
-    $("#12A-replacer-button").click(function() {
+    $("#12A-replacer-button").click(function () {
         walkText(document.body);
     });
 
